@@ -1,0 +1,7 @@
+configMapGenerator:
+  - name: valor-code-configmap
+
+resources:
+  - cassandra.yaml
+  - zookeeper.yaml
+  - kafka.yaml

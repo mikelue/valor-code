@@ -1,0 +1,288 @@
+:toc:
+
+= Database Schema
+
+== Database Schema(PostgreSQL)
+
+[#vc_land]
+=== vc_land
+
+The data for lands.
+
+[%header,cols="2m,2e,2s,4"]
+|===
+| column
+| type
+| constraint
+| comment
+
+| ld_id
+| UUID
+| Primary Key
+| The id of land
+
+| ld_name
+| varchar(128)
+| Unique
+| The name of land
+
+| ld_size
+| smallint
+|
+| The number of blocks
+
+| ld_climate
+| enum_climate
+|
+| The climate of land
+
+| ld_creation_time
+| timestamp with time zone
+|
+| The creation time of land
+|===
+
+=== vc_block
+
+The data for blocks.
+
+Primary key: (`bl_ld_id`, `bl_id`)
+
+[%header,cols="2m,2e,2s,4"]
+|===
+| column
+| type
+| constraint
+| comment
+
+| bl_ld_id
+| UUID
+|
+| The id of link:#vc_land[land]
+
+| bl_id
+| smallint
+|
+| The id(sequencial number) of block in the land
+
+| bl_crop
+| link:#enum_crop[enum_crop]
+| nullable
+| The crop is scheduled or occupied this block.
+
+| bl_sow_time
+| timestamp with timezone
+| nullable
+| The time of sowing
+
+The value of time is filled after sowing(`bl_status` is `Occupied`).
+
+| bl_mature_time
+| timestamp with timezone
+| nullable
+| The time of mature
+
+The value of time is filled after sowing(`bl_status` is `Occupied`).
+
+| bl_harvest_amount
+| smallint
+| nullable
+| The amount of harvesting(after scheduled)
+
+The value of amount is filled after scheduled harvesing(`bl_status` is `ScheduledHarvest`).
+
+| bl_status
+| link:#enum_block_status[enum_block_status]
+|
+| The status of block
+
+| bl_comment
+| varchar(512)
+| nullable
+| The comment of block
+
+| bl_update_time
+| timestamp with time zone
+|
+| The update time of this block
+|===
+
+=== Enum type
+
+[#enum_crop]
+==== enum_crop
+
+[source,sql]
+----
+CREATE TYPE enum_crop AS enum(
+    'Manioc', 'Rice', 'Yams', 'Grape', 'Tomato', 'Pumpkin', 'Kale', 'Spinach', 'Lettuce'
+);
+----
+
+[#enum_climate]
+==== enum_climate
+
+[source,sql]
+----
+CREATE TYPE enum_climate AS enum(
+    'Tropical', 'Dry', 'Mild', 'Continental', 'Polar'
+);
+----
+
+[#enum_block_status]
+==== enum_block_status
+
+[source,sql]
+----
+CREATE TYPE enum_block_status AS enum(
+    'Available', 'ScheduledSow', 'Occupied', 'ScheduledHarvest', 'ScheduledClean'
+);
+----
+
+== Database Schema(Cassandra)
+
+=== vc_land_log_by_time
+
+The logging of a block, this log just records three type of activity:
+
+1. When the block is sowing.
+1. When the block is havesting.
+1. When the block is cleaning.
+
+Primary Key: (`ll_ld_id`, `ll_time`(desc), `ll_bl_id`(asc))
+
+[%header,cols="2m,2e,2s,4"]
+|===
+| column
+| type
+| constraint
+| comment
+
+| ll_ld_id
+| UUID
+| Partition Key
+| The UUID of land
+
+| ll_time
+| timestamp
+| Cluster Key
+| The timestamp of log
+
+See link:#ca-value-activity[Cassandra value for activity]
+
+| ll_bl_id
+| smallint
+| Cluster Key
+| The id of block
+
+| ll_activity
+| tinyint
+|
+| The activity.
+
+| ll_used_time_second
+| smallint
+|
+| The used time(seconds) of activity
+
+| ll_bl_payload
+| link:#udt_block[udt_block]
+|
+| The payload of block(as the snapshot of the block before the activity is peformed)
+|===
+
+=== UDTs
+
+[#udt_block]
+==== udt_block
+
+The snapshot of blocks.
+
+[%header,cols="2m,2e,4"]
+|===
+| column
+| type
+| comment
+
+| bl_crop
+| tinyint
+| The crop for this activity.  See link:#ca-value-crops[Cassandra value for crops]
+
+| bl_sow_time
+| timestamp
+| The timestamp of sowing
+
+| bl_mature_time
+| timestamp
+| The timestamp of mature
+
+| bl_harvest_amount
+| smallint
+| The amount of harvesting
+
+`-1` - If there is no harvesting information.
+
+| bl_comment
+| text
+| The comment of block
+
+| bl_update_time
+| timestamp
+| The update time of block
+|===
+
+== References
+
+[#ca-value-crops]
+=== Cassandra value for crops
+
+[%header,cols="2m,2s"]
+|===
+| crop
+| value
+
+| manioc
+| 1
+
+| rice
+| 2
+
+| yams
+| 3
+
+| grape
+| 4
+
+| tomato
+| 5
+
+| pumpkin
+| 6
+
+| kale
+| 7
+
+| spinach
+| 8
+
+| lettuce
+| 9
+|===
+
+[#ca-value-activity]
+=== Cassandra value for activities
+
+[%header,cols="2m,2s"]
+|===
+| activity
+| value
+
+| sowing
+| 1
+
+| harvesting
+| 2
+
+| cleaning
+| 3
+|===

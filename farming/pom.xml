@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.7.2</version>
+	</parent>
+
+	<groupId>guru.mikelue</groupId>
+	<artifactId>farming</artifactId>
+	<version>0.1-SNAPSHOT</version>
+	<name>farming</name>
+	<description>Farming of valor code</description>
+
+	<properties>
+		<java.version>17</java.version>
+
+		<!--
+		  - Versions of dependencies
+		  -->
+		<!-- Provided by Spring-Boot -->
+		<postgres.version>42.3.6</postgres.version>
+		<slf4j.version>1.7.36</slf4j.version>
+		<logback.version>1.2.11</logback.version>
+		<spring-kafka.version>2.9.0</spring-kafka.version>
+
+		<version.liquibase>4.14.0</version.liquibase>
+		<version.hibernate-types>2.17.1</version.hibernate-types>
+		<version.jmockit>1.49</version.jmockit>
+		<version.javafaker>1.0.2</version.javafaker>
+		<!-- :~) -->
+
+		<!--
+		  - Properties for databases(PostgreSQL, Cassandra)
+		  -->
+		<db.host>postgres</db.host>
+		<db.database>valor_farming_ut</db.database>
+		<db.url>jdbc:postgresql://${db.host}/${db.database}</db.url>
+		<db.username>local_dev0627</db.username>
+		<db.password></db.password>
+		<db.cassandra.keyspace>valor_farming_ut</db.cassandra.keyspace>
+		<db.cassandra.contact-points>cassandra-0:9042</db.cassandra.contact-points>
+		<db.cassandra.local-datacenter>DC1-K8Demo</db.cassandra.local-datacenter>
+		<!-- :~) -->
+
+		<!--
+		  - Properties for databases(PostgreSQL, Cassandra)
+		  -->
+		<kafka.bootstrap-servers>kafka-0:9092</kafka.bootstrap-servers>
+		<kafka.consumer.group-id>valor-farming</kafka.consumer.group-id>
+		<kafka.replica>2</kafka.replica>
+		<kafka.partitions>4</kafka.partitions>
+		<!-- :~) -->
+
+		<!--
+		  - Properties of Liquibase
+		  -->
+		<liquibase.databaseChangeLogLockTableName>lq_lock</liquibase.databaseChangeLogLockTableName>
+		<liquibase.databaseChangeLogTableName>lq_change_log</liquibase.databaseChangeLogTableName>
+		<liquibase.username>${db.username}</liquibase.username>
+		<liquibase.password>${db.password}</liquibase.password>
+		<liquibase.url>${db.url}</liquibase.url>
+		<liquibase.changeLogDirectory>src/main/resources/liquibase</liquibase.changeLogDirectory>
+		<liquibase.changeLogFile>changelog.xml</liquibase.changeLogFile>
+		<!-- :~) -->
+
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<dependencies>
+		<!--
+		  - SpringFramework
+		  -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-cassandra</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka</artifactId>
+		</dependency>
+		<!-- :~) -->
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+		</dependency>
+
+		<!--
+		  - JPA
+		  -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.vladmihalcea</groupId>
+			<artifactId>hibernate-types-55</artifactId>
+			<version>${version.hibernate-types}</version>
+		</dependency>
+		<!-- :~) -->
+
+		<!--
+		  - For testing
+		  -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.projectreactor</groupId>
+			<artifactId>reactor-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka-test</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.jmockit</groupId>
+			<artifactId>jmockit</artifactId>
+			<version>${version.jmockit}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.github.javafaker</groupId>
+			<artifactId>javafaker</artifactId>
+			<version>${version.javafaker}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- :~) -->
+	</dependencies>
+
+	<build>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+				<excludes>
+					<exclude>**/*.swp</exclude>
+				</excludes>
+			</resource>
+		</resources>
+		<testResources>
+			<testResource>
+				<directory>src/test/resources</directory>
+				<filtering>true</filtering>
+				<excludes>
+					<exclude>**/*.swp</exclude>
+				</excludes>
+			</testResource>
+		</testResources>
+
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<groupId>org.liquibase</groupId>
+				<artifactId>liquibase-maven-plugin</artifactId>
+				<version>${version.liquibase}</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<configuration>
+					<delimiters>
+						<delimiter>${*}</delimiter>
+					</delimiters>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>-javaagent:"${settings.localRepository}"/org/jmockit/jmockit/${version.jmockit}/jmockit-${version.jmockit}.jar </argLine>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>3.0.0-M7</version>
+			</plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+		<profile>
+			<id>it-dev</id>
+			<build>
+				<plugins>
+					<plugin>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<skipTests>true</skipTests>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>it-database</id>
+			<properties>
+				<db.database>valor_farming</db.database>
+				<db.cassandra.keyspace>valor_farming</db.cassandra.keyspace>
+			</properties>
+		</profile>
+	</profiles>
+</project>

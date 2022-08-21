@@ -1,0 +1,297 @@
+:toc:
+
+# Valor code
+
+Valor code is a simulator for back-end technologies.
+
+The technologies is going to be used:
+
+:java-version: 17
+:pgsql-version: 14
+:kafka: https://kafka.apache.org/[Kafka]
+:cassandra: https://cassandra.apache.org/doc/latest/[Cassandra]
+:k8s: https://kubernetes.io/[Kubernetes]
+
+1. https://docs.spring.io/spring-framework/docs/current/reference/html/core.html[Spring framework]: https://spring.io/projects/spring-boot[SpringBoot], https://spring.io/projects/spring-data[SpringData], https://docs.spring.io/spring-framework/docs/current/reference/html/web-reactive.html[WebFlux]
+1. https://docs.docker.com/[Docker] for deployment
+1. https://kubernetes.io/docs/home/[Kubernetes] with https://kustomize.io/[kustomized]. Configurations for https://minikube.sigs.k8s.io/docs/start/[minkube]
+1. https://kafka.apache.org/[kafka] for queuing/event sourcing
+1. https://www.postgresql.org/docs/{pgsql-version}/index.html[PostgreSQL] and https://cassandra.apache.org/doc/latest/[Cassandra]
+
+Of course, https://docs.oracle.com/en/java/javase/{java-version}/[Java]
+
+== Settings
+
+Settings can be put in https://docs.oracle.com/en/java/javase/{java-version}/docs/specs/man/java.html[java] command optional `-D<prop>=<value>`
+
+=== Required cleaning
+
+* `spring.datasource.url` - For database URL of PostgreSQL
+* `spring.datasource.username` - For connecting to PostgreSQL
+* `spring.datasource.password` - For connecting to PostgreSQL
+
+* `spring.data.cassandra.keyspace-name` - The keyspace on which this application is using
+* `spring.data.cassandra.contact-points` - For connecting to Cassandra
+* `spring.data.cassandra.local-datacenter` - For name of data center
+
+* `spring.kafka.bootstrap-servers` - For connecting to Kafka
+* `spring.kafka.consumer.group-id` - The group id of consumer
+
+=== Optional properties
+
+* `valor.farming.duration.too-long-scheduled-activities`(default: `PT5M`) - The https://docs.oracle.com/en/java/javase/{java-version}/docs/api/java.base/java/time/Duration.html[Duration] string(e.g. `PT5M`) for some of activities are kept same status since update time.
+
+== Deployment
+
+=== Run by Maven
+
+```sh
+cd farming
+
+mvn -q spring-boot:run
+```
+
+=== Build application(Docker)
+
+```sh
+cd farming
+
+mvn -DskipTests=true package
+docker build --build-arg JAR_FILE=target/*.jar -t valor-code/farming .
+```
+
+=== Setting up cluster of Kubernetes
+
+In link:./kustomize[./kustomize] directory, you can use https://kubectl.docs.kubernetes.io/references/kustomize/[kustomize] to intialize cluster in Minikube.
+
+```sh
+kubectl kustomize ./kustomize | kubectl apply -l -f -
+```
+
+The cluster contains nodes by default:
+
+* Two nodes of Kafka
+** Depends on one node of Zookeeper
+* Two nodes of Cassandra
+
+Don't forget to set up PostgreSQL by your favor environment.
+
+=== Migration for database schemas
+
+==== PostgreSQL
+
+By Maven plugin of https://docs.liquibase.com/tools-integrations/maven/home.html[Liquibase].
+
+```sh
+cd farming
+mvn liquibase:update -Ddb.url= -Ddb.username= -Ddb.password=
+```
+
+Required properties:
+
+* `db.url` - As the URL of PostgreSQL
+* `db.username` - For connecting to PostgreSQL
+* `db.password` - For connecting to PostgreSQL
+
+==== Cassandra
+
+By https://github.com/Cobliteam/cassandra-migrate[cassandra-migrate](Built by Python language)
+
+```sh
+cd farming/cassandra
+cassandra-migrate -H cassandra-0 migrate
+```
+
+== Scripts
+
+In link:./scripts[./scripts] directory, there are some scripts to perform testing.
+
+* link:./scripts/new-lands.sh[new-lands.sh] - Creates 10 lands
+* link:./scripts/ask-sowing.sh[ask-sowing.sh] - Ask random number of blocks for sowing; every land will get asked.
+* link:./scripts/ask-cleaning.sh[ask-cleaning.sh] - Ask random number of blocks for cleaning; every land will get asked.
+
+== Domain objects
+
+=== Land
+
+A land is place with following attributes:
+
+* A land has an unique name over universe.
+* The number of squares this land holds.
+* The climates: `tropical`, `dry`, `mild`, `continental`, `polar`
+
+==== Block
+
+A land contains `1:N` blocks for cultivating crops.
+
+Block status:
+
+1. A scheduled(sow, harvest, or clean) block cannot be change anymore until the process handle it.
+1. A empty block can be scheduled for sowing
+1. A occupied and mature block can be scheduled for harvesting
+1. A occupied block can be scheduled for cleaning
+
+=== Crops
+
+A few crops can be grown on land:
+
+* `manioc`, `rice`, `yams` - can be grown in tropical, mild, or continental land.
+* `grape`, `tomatoe`, `pumpkin` - can be grown in mild, continental, dry land.
+* `kale`, `spinach`, `lettuce` - can be grown in mild, continental, polar land.
+
+.Growing time for crops
+[%header,cols="2,2,2,2,2"]
+|===
+| Crop
+| Sowing time(seconds)
+| Growing time(seconds)
+| Harvest time(seconds)
+| Harvest quantity
+
+| manioc
+| 2 ~ 5
+| 15 ~ 20
+| 2 ~ 5
+| 5 ~ 10
+
+| rice
+| 2 ~ 5
+| 17 ~ 23
+| 2 ~ 5
+| 10 ~ 20
+
+| yams
+| 2 ~ 5
+| 15 ~ 25
+| 2 ~ 5
+| 10 ~ 15
+
+| grape
+| 3 ~ 8
+| 10 ~ 20
+| 3 ~ 7
+| 5 ~ 15
+
+| tomato
+| 3 ~ 8
+| 10 ~ 20
+| 3 ~ 7
+| 15 ~ 30
+
+| pumpkin
+| 3 ~ 8
+| 10 ~ 15
+| 3 ~ 7
+| 3 ~ 8
+
+| kale
+| 4 ~ 10
+| 10 ~ 20
+| 2 ~ 5
+| 5 ~ 12
+
+| spinach
+| 4 ~ 10
+| 10 ~ 25
+| 5 ~ 10
+| 10 ~ 30
+
+| lettuce
+| 4 ~ 10
+| 5 ~ 12
+| 5 ~ 10
+| 10 ~ 20
+|===
+
+== APIs
+
+See link:./API.adoc[API documention]
+
+== Internal works
+
+* link:./data-schema.adoc[Data Schema]
+
+* Land and blocks are created by API.
+* Sowing API would scheduled available blocks on a land for target crop.
+* Harvesting service would search matured crops and scheduled it for harvesting.
+* Cron service would search scheduled blocks that their _'update_time'_ is old than certain duration.
+** See property value of `valor.farming.duration.too-long-scheduled-activities`
+
+== Local developing
+
+=== Maven profiles
+
+* *DEFAULT*(unit test)
+** `db.database` - *valor_farming_ut*
+** `db.cassandra.keyspace` - *valor_farming_ut*
+
++
+.Verify by single IT class
+[source,sh]
+----
+mvn -P it-dev -q verify -Dit.test=BlockControllerIT
+----
+
+* `it-dev` - Skips `*Test.java`, used with Maven https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html[verify].
+
+* `it-database` - Different PostgreSQL database and Cassandra keyspace
+.Used by full-started application
+** `db.database` - *valor_farming*
+** `db.cassandra.keyspace` - *valor_farming*
+
++
+.Used with full-started application
+[source,sh]
+----
+mvn -P it-database spring-boot:start
+
+mvn -P it-database spring-boot:run
+----
+
+=== Use Kafka/Cassandra cluster with minicube
+
+Listening properties:
+
+* {kafka} - Use `advertised.listeners` to advertise client the real connection for every StatefulSet pod.
+* {cassandra} - Use `broadcast_rpc_address` to advertise client the real connection for every StatefulSet pod.
+
+Setting-up
+
+1. Assign multiple IP addresses on host of minicube. https://askubuntu.com/questions/1242831/ubuntu-server-20-04-netplan-multiple-ip-addresses-on-one-network-card[Setting up Multiple IPs on Ubuntu]
+1. Adds entries to `/etc/hosts`:
++
+./etc/hosts
+[source]
+----
+<ip-1> kafka-0.kafka.default.svc.cluster.local kafka-0
+<ip-2> kafka-1.kafka.default.svc.cluster.local kafka-1
+<ip-3> kafka-2.kafka.default.svc.cluster.local kafka-2
+
+<ip-1> cassandra-0.cassandra.default.svc.cluster.local cassandra-0
+<ip-2> cassandra-1.cassandra.default.svc.cluster.local cassandra-1
+<ip-3> cassandra-2.cassandra.default.svc.cluster.local cassandra-2
+----
+1. Start `port-forward`
++
+[source,sh]
+----
+kubectl port-forward --address=<ip-0> po/kafka-0 9092:kafka &
+kubectl port-forward --address=<ip-1> po/kafka-1 9092:kafka &
+kubectl port-forward --address=<ip-2> po/kafka-2 9092:kafka &
+
+kubectl port-forward --address=<ip-0> po/cassandra-0 9092:cassandra &
+kubectl port-forward --address=<ip-1> po/cassandra-1 9092:cassandra &
+kubectl port-forward --address=<ip-2> po/cassandra-2 9092:cassandra &
+----
+
+With above tech, you can use `kafka-0`, `kafak-1`, `cassandra-0`, etc., to bootstrap client of {kafka}.
+
+.Example
+[source,sh]
+----
+./kafka-topics.sh --bootstrap-server kafka-0:9092 --create --topic sample-topic-1
+----
+
+If you are using https://docs.microsoft.com/en-us/windows/wsl/[WSL], you may like to modify the file of `%WINDIR%\System32\drivers\etc\hosts`.
+
+// vim: expandtab tabstop=4

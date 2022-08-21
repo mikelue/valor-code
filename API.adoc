@@ -1,0 +1,495 @@
+:toc:
+
+= APIs of valor code
+
+:accept-v0: pass:q[`application/vnd.valor-code.v0+json`]
+:response-content-type: pass:q[`application/vnd.valor-code.v0+json`]
+:http_get: pass:q[`*[GET]*`]
+:http_post: pass:q[`*[POST]*`]
+:http_put: pass:q[`*[PUT]*`]
+:http_delete: pass:q[`*[DELETE]*`]
+
+== For land
+
+[#get-land]
+=== {http_get} `/land/{land_id}`
+
+Gets a land by it's id.
+
+* `{land_id}` - The id(UUID) of land.
+
+Response(`200`, {response-content-type})::
++
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+{
+    'id': "ab66d2e8-0caf-11ed-80c5-00155d8fd4c9",
+    "name": "Guadeloupe",
+    "size": 30,
+    "climate": 1
+}
+----
+|
+[%header,cols="1m,1s,1a"]
+!===
+! name ! constraint ! description
+
+! id ! reaonly ! The UUID for the land
+! name ! unique ! The name for the land
+! size ! 1 ~ 10000 ! The number of squares for the land
+! climate !  ! See link:#json-value-climates[JSON value for climates]
+! creation_time !  ! The time of creation of this land
+!===
+|===
+
+[#get-lands]
+=== {http_get} `/lands`
+
+Gets a list of lands.
+
+Paging with page-size. `page-sort: name,size`
+
+Response(`200`, {response-content-type})::
++
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+[
+    /* See detail*/
+]
+----
+| Same as link:#get-land["[GET\] /land/{land_id}]"]
+|===
+
+[#post-land]
+=== {http_post} `/land`
+
+Adds a land
+
+Request({http_post}, {accept-v0})::
++
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+{
+    "name": "Guadeloupe",
+    "size": 30,
+    "climate": 1
+}
+----
+|
+[%header,cols="1m,1s,1a"]
+!===
+! name ! constraint ! description
+
+! name ! unique ! The name for the land(case-sensitive)
+! size ! 1 ~ 10000 ! The number of squares for the land
+! climate !  ! See link:#json-value-climates[JSON value for climates]
+!===
+|===
+
+Response(`201`, {response-content-type})::
+Adding is successful, see link:#get-land["[GET\] /land/{land_id}"]
+
+Response(`409`, {response-content-type}) ::
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+{
+    "status": 409,
+    "code": 1
+}
+----
+|
+[%header,cols="1m,1s,1a"]
+!===
+! name ! constraint ! description
+
+! code ! !
+The error type
+
+* `1` - The name has been used
+!===
+|===
+
+=== {http_put} `/land/{land_id}`
+
+Modify a land
+
+Request({http_put}, {accept-v0})::
++
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+{
+    "name": "Guadeloupe"
+}
+----
+|
+[%header,cols="1m,1s,1a"]
+!===
+! name ! constraint ! description
+
+! name ! unique ! The name for the land(case-sensitive)
+!===
+|===
+
+Response(`200`, {response-content-type})::
+Modifying is successful, see link:#get-land["[GET\] /land/{land_id}"]
+
+Response(`409`, {response-content-type}) ::
+Same as link:#post-land["[POST\] /land"]
+
+=== {http_delete} `/land/{land_id}`
+
+Deletes a land.
+
+Any scheduled actions for this land would log some warning message.
+
+Response(`200`, {response-content-type})::
+Deletion is successful, see link:#get-land["[GET\] /land/{land_id}"]
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+{
+    "number_of_blocks": 3
+}
+----
+|
+[%header,cols="1m,1s,1a"]
+!===
+! name ! constraint ! description
+
+! .number_of_blocks ! ! The number of deleted blocks
+!===
+|===
+
+
+== For Land's blocks
+
+[#get-blocks]
+=== {http_get} `/land/{land_id}/blocks`
+
+Gets the information of blocks of a land.
+
+Response(`200`, {response-content-type})::
++
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+[
+    {
+        "id": 3,
+        "crop": 3,
+        "sow_time": 5900614,
+        "mature_time": 35900614,
+        "harvest_amount": 3,
+        "status": 1,
+        "comment": "Today is really hot",
+        "update_time": 2832942
+    },
+    /* ... more ... */
+]
+----
+|
+[%header,cols="1m,1s,1a"]
+!===
+! name ! constraint ! description
+
+! [].id ! ! The id of blocks, start with `0`
+! [].crop ! nullable !
+The grown crop on this block(see link:#json-value-crops[JSON value for crops])
+! [].sow_time ! nullable ! The time of sowing for this crop
+! [].mature_time ! nullable ! The time of mature for this crop
+! [].harvest_amount ! nullable !
+The expected amount for harvesting
+! [].status !  ! The status of this block
+
+* `0` - This block is available for sowing
+* `1` - This block is scheduled(enqueued) to be sowing
+* `2` - This block is occupied by crops
+* `3` - This block is scheduled(enqueued) to be harvested
+* `4` - This block is scheduled(enqueued) to be cleaned
+
+! [].comment ! nullable ! The comment for this block
+! [].update_time ! ! The update time for this block
+!===
+|===
+
+Response(`400`, {response-content-type})::
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+{
+    "status": 400,
+    "code": 1,
+    "detail": {
+        "crop": 2,
+        "climate": 3
+    }
+}
+----
+|
+[%header,cols="1m,1s,1a"]
+!===
+! name ! constraint ! description
+
+! code ! !  The error type
+
+* `1` - The climate doesn't fit the asked crop
+
+! crop ! !  The link:#json-value-crops[crop] to be grown
+! climate ! !  The link:#json-value-climate[climate] of the land
+!===
+|===
+
+=== {http_post} `/land/{land_id}/sow`
+
+Sows over empty blocks.
+
+Request(`200`, {response-content-type})::
++
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+{
+    "asked_blocks": 10,
+    "crop": 1,
+    "comment": "Today is really hot"
+}
+----
+|
+[%header,cols="1m,1s,1a"]
+!===
+! name ! constraint ! description
+
+! asked_blocks ! At least 1 ! The number of block to be sowed
+! crop ! ! The crop to be seeded
+! comment ! ! The comment for logging and block
+!===
+|===
+
+Response(`200`, {response-content-type}):: For *at least one blocks* is scheduled to be sown
+See link:#get-blocks["[GET\] /land/{land_id}/blocks"]
+
+Response(`409`, {response-content-type})::
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+{
+    "code": 1
+}
+----
+|
+[%header,cols="1m,1s,1a"]
+!===
+! name ! constraint ! description
+
+! code ! !  The error type
+
+* `1` - Cannot find any empty block to be sown
+!===
+|===
+
+=== {http_post} `/land/{land_id}/clean`
+
+Clean blocks for at most `<N>` blocks.
+
+This function would minus asked blocks with current empty blocks.
+If there are not enough blocks for cleaning, this function would schedule occupied blocks to be cleaning from lower id of blocks.
+
+Request(`200`, {response-content-type})::
++
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+{
+    "asked_blocks": 10,
+    "comment": "nectarine"
+}
+----
+|
+[%header,cols="1m,1s,1a"]
+!===
+! name ! constraint ! description
+
+! asked_blocks ! At least 1 ! The number of block to be asked be cleaned
+! comment !  ! The comment for cleaning blocks
+!===
+|===
+
+Response(`200`, {response-content-type})::
++
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+{
+    "number_of_available_blocks": 45,
+    "scheduled_blocks_for_cleaning": 3,
+}
+----
+|
+[%header,cols="1m,1s,1a"]
+!===
+! name ! constraint ! description
+
+! number_of_available_blocks !  ! The number of empty blocks
+! number_of_scheduled_blocks_for_cleaning !  ! The number of scheduled blocks for cleaning
+!===
+|===
+
+== For Land's logs
+
+=== {http_get} `/land/{land_id}/logs`
+
+Gets the information of logs of a land.
+
+There would be only maximum of **1000 records** for a query.
+
+Request(Query parameter)::
+* `start_time` - Start time of log(e.g., `2020-05-10T10:10:00Z`)
+* `end_time` - End time of log(e.g., `2020-05-10T16:10:00Z`)
+
+Response(`200`, {response-content-type})::
++
+[cols="2a,4a"]
+|===
+|
+[source,javascript]
+----
+[
+    {
+        "block": 23,
+        "activity": 1,
+        "activity_time": 35900614,
+        "used_time": 4872,
+        "comment": "The block is sowing for stuff",
+        "payload": { /* See detail information */ }
+    },
+    /* ... more ... */
+]
+----
+|
+[%header,cols="1m,1s,1a"]
+!===
+! name ! constraint ! description
+
+! [].block ! ! The id of block, start with `0`
+! [].activity ! ! The activity to be logged
+
+* `1` - Sowing a crop
+* `2` - Harvesting a crop
+* `3` - Clean the block
+! [].activity_time ! ! The timeostamp of activity
+! [].used_time ! ! The time used for activity(as seconds)
+! [].comment !  ! The comment of activity
+! [].payload !  ! The snapshot of the block, see link:#get-blocks[/land/{land_id}/blocks}]
+
+!===
+|===
+
+== References
+
+[#json-value-crops]
+=== JSON value for crops
+
+[%header,cols="2m,2s"]
+|===
+| crop
+| value
+
+| manioc
+| 1
+
+| rice
+| 2
+
+| yams
+| 3
+
+| grape
+| 4
+
+| tomato
+| 5
+
+| pumpkin
+| 6
+
+| kale
+| 7
+
+| spinach
+| 8
+
+| lettuce
+| 9
+|===
+
+[#json-value-climates]
+=== JSON value for climates
+
+[%header,cols="2m,2s"]
+|===
+| climate
+| value
+
+| tropical
+| 1
+
+| dry
+| 2
+
+| mild
+| 3
+
+| continental
+| 4
+
+| polar
+| 5
+|===
+
+== HTTP References
+
+*PAGING*: Woring with HTTP headers:
+
+With page-size::
++
+* `page`(default: *0*): As number of page. e.g., `5`
+* `page-size`(default: *20*): As number of page-size. e.g., `20`
+* `page-sort`: Comma seperated string for attributes to sorted.
+** You can suffix `:desc`, `:asc` to change sorting direction
+** e.g., `name:asc,size`
+
+With pointer of list::
++
+* `page-previous`: Pointer(text) for previous page
+* `page-next`: Pointer(text) for next page
+
+// vim: expandtab tabstop=4

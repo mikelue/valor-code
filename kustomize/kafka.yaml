@@ -1,0 +1,68 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  labels:
+    app: kafka
+spec:
+  clusterIP: None
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: kafka
+  selector:
+    app: kafka
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+  labels:
+    app: kafka
+spec:
+  serviceName: kafka
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: kafka-container
+          image: bitnami/kafka:3.2
+          ports:
+            - name: kafka
+              containerPort: 9092
+          env:
+            - name: KAFKA_CFG_ZOOKEEPER_CONNECT
+              value: "zk.default.svc.cluster.local"
+            - name: KAFKA_CLIENT_PASSWORDS
+              value: dev@local0627
+            - name: CLUSTER_ID
+              value: DemoK8s
+            - name: ALLOW_PLAINTEXT_LISTENER
+              value: yes
+            - name: NAMESPACE
+              value: default
+            - name: SERVICE
+              value: kafka-svc
+            - name: DEFAULT_REPLICATION_FACTOR
+              value: '2'
+            - name: KAFKA_CFG_LOG_DIR
+              value: /mnt/kafka
+          volumeMounts:
+            - name: kafka-data
+              mountPath: /mnt/kafka
+  volumeClaimTemplates:
+    - metadata:
+        name: kafka-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 1Gi

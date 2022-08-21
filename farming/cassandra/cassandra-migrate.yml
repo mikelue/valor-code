@@ -1,0 +1,7 @@
+keyspace: valor_farming
+profiles:
+  local_dev:
+    replication:
+      class: SimpleStrategy
+      replication_factor: 2
+migrations_path: ./

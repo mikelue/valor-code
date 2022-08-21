@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+	xmlns:pro="http://www.liquibase.org/xml/ns/pro"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+		http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+		http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd">
+
+    <changeSet id="1" author="mike">
+		<comment>create types of enum</comment>
+		<sql>
+            CREATE TYPE enum_crop AS enum(
+				'Manioc', 'Rice', 'Yams', 'Grape', 'Tomato', 'Pumpkin', 'Kale', 'Spinach', 'Lettuce'
+            );
+            CREATE TYPE enum_climate AS enum(
+            	'Tropical', 'Dry', 'Mild', 'Continental', 'Polar'
+            );
+            CREATE TYPE enum_block_status AS enum(
+				'Available', 'ScheduledSow', 'Occupied', 'ScheduledHarvest', 'ScheduledClean'
+            );
+
+			CREATE CAST (VARCHAR AS enum_crop) WITH INOUT AS IMPLICIT;
+			CREATE CAST (VARCHAR AS enum_climate) WITH INOUT AS IMPLICIT;
+			CREATE CAST (VARCHAR AS enum_block_status) WITH INOUT AS IMPLICIT;
+		</sql>
+
+		<rollback>
+			<sql>
+				DROP CAST IF EXISTS (VARCHAR AS enum_crop);
+				DROP TYPE IF EXISTS enum_crop;
+				DROP CAST IF EXISTS (VARCHAR AS enum_climate);
+				DROP TYPE IF EXISTS enum_climate;
+				DROP CAST IF EXISTS (VARCHAR AS enum_block_status);
+				DROP TYPE IF EXISTS enum_block_status;
+			</sql>
+		</rollback>
+    </changeSet>
+
+    <changeSet id="2" author="mike">
+		<comment>create tables</comment>
+
+		<createTable tableName="vc_land">
+			<column name="ld_id" type="UUID" defaultValueComputed="gen_random_uuid()">
+				<constraints primaryKey="true" primaryKeyName="pk_vc_land" />
+			</column>
+			<column name="ld_name" type="varchar(128)">
+				<constraints nullable="false" unique="true" uniqueConstraintName="unq_vc_land__ld_name" />
+			</column>
+			<column name="ld_size" type="smallint">
+				<constraints nullable="false" />
+			</column>
+			<column name="ld_climate" type="enum_climate">
+				<constraints nullable="false" />
+			</column>
+			<column name="ld_creation_time" type="timestamp with time zone" defaultValueDate="NOW()">
+				<constraints nullable="false" />
+			</column>
+		</createTable>
+
+		<createTable tableName="vc_block">
+			<column name="bl_ld_id" type="UUID">
+				<constraints foreignKeyName="fk_vc_block__vc_land" references="vc_land(ld_id)" />
+			</column>
+			<column name="bl_id" type="smallint">
+				<constraints nullable="false"/>
+			</column>
+			<column name="bl_crop" type="enum_crop" />
+			<column name="bl_sow_time" type="timestamp with timezone" />
+			<column name="bl_mature_time" type="timestamp with timezone" />
+			<column name="bl_harvest_amount" type="smallint" />
+			<column name="bl_status" type="enum_block_status" defaultValue="Available">
+				<constraints nullable="false"/>
+			</column>
+			<column name="bl_comment" type="varchar(512)" />
+			<column name="bl_update_time" type="timestamp with time zone" defaultValueDate="NOW()">
+				<constraints nullable="false"/>
+			</column>
+		</createTable>
+
+		<addPrimaryKey tableName="vc_block"
+			columnNames="bl_ld_id, bl_id ASC" constraintName="pk_vc_block" />
+
+		<rollback>
+			<dropTable tableName="vc_block" />
+			<dropTable tableName="vc_land" />
+		</rollback>
+    </changeSet>
+
+    <changeSet id="3" author="mike">
+		<comment>create indexes</comment>
+
+		<sql>
+			CREATE INDEX ix_land_available_occupied_block
+				ON vc_block(bl_ld_id, bl_status, bl_id ASC)
+			WHERE bl_status IN ('Available', 'Occupied');
+
+			CREATE INDEX ix_block_ready_to_be_harvested
+				ON vc_block(bl_mature_time ASC)
+			WHERE bl_status = 'Occupied';
+		</sql>
+
+		<rollback>
+			<dropIndex tableName="vc_block" indexName="ix_block_ready_to_be_harvested" />
+			<dropIndex tableName="vc_block" indexName="ix_land_available_occupied_block" />
+		</rollback>
+    </changeSet>
+</databaseChangeLog>
